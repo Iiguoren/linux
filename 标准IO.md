@@ -127,6 +127,32 @@ int main(){
 结果：fopen() failed!errno is No such file or directory
 ```
 
+## fclose()
+```C
+NAME
+       fclose - close a stream
+SYNOPSIS
+       #include <stdio.h>
+       int fclose(FILE *stream);
+```
+fopen和fclose成对出现
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+int main(){
+        FILE *fi;
+        fi = fopen("tmp", "r");
+        if(fi == NULL){
+                fprintf(stderr, "fopen() failed!errno is %d\n",errno);
+                exit(1);
+        }
+        puts("OK");
+        fclose(fi);
+        exit(0);
+}
+```
+
 **试题1**：
 ```c
 char *ptr = "abc";
@@ -135,6 +161,13 @@ ptr[0] = 'x';
 
 //字符指针ptr指向了一个字符常量，字符常量的内容是不可修改的；ptr[0]会导致程序修改只读内存，在大多数编译器下是非法行为
 ```
+**思考题**：
+fopen函数返回的FILE结构体指针是指向栈/静态区/堆？
+栈：栈上的内存由编译器自动分配和释放，通常用于存储局部变量和函数调用时的参数、返回地址等。
 
+堆：堆上的内存由程序员手动分配和释放，使用 malloc、calloc（在 C 中）或 new（在 C++ 中）动态分配，使用 free（C）或 delete（C++）释放。
+
+静态区：由编译器在程序开始运行时分配，程序结束时释放。用于存储全局变量、静态变量（static 修饰的变量）、常量（字符串常量等）。
+fopen函数返回的指针对象内存不会在函数内消失，因此不在堆；函数fopen声明FILE变量时候，如果储存在静态区因为静态区的静态变量在全局作用域只声明一次，就只能打开一个文件，所以不在静态区；又因为堆上面的内存要手动回收而且fopen有fclose对应因此在堆上。
 
 
