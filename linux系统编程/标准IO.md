@@ -370,6 +370,16 @@ int main(int argc, char **argv){
 	exit(0);
 }
 ```
+
+## 临时文件tmpnam(),tempfile()
+```c
+  #include <stdio.h>
+  char *tmpnam(char *s);
+// 创建一个临时文件，先产生文件名字2、创建文件
+  FILE *tmpfile(void);
+// 创建临时文件，返回一个FILE结构体用来操作，原子化的创建，并且即使没有close掉在程序结束时候也会自动清理内存，没有泄露风险。
+```
+
 **试题1**：
 ```c
 char *ptr = "abc";
