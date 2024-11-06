@@ -3,6 +3,14 @@ io是一切实现的基础，IO分为标准IO:stdio,系统调用IO/文件IO:sysi
 ## stdio函数
 标准IO是对系统调用IO的封装，标准IO依赖于系统调用IO;都可以使用优先使用标准IO,例如：
 标准IO fopen函数在linux环境下以来open函数，windows环境下以来openfile函数。因此标准IO可移植性大于系统调用IO
+### 格式化字符串
+格式化字符串是一种包含文本和格式说明符的字符串，用于指定输出的内容和排版方式。格式说明符通常以 % 开头；
+`printf("Name: %s, Age: %d, Height: %.2f, Initial: %c\n", name, age, height, initial);`
+在这个示例中，格式化字符串为 "Name: %s, Age: %d, Height: %.2f, Initial: %c\n"，其中：
+%s 被替换为字符串变量 name 的值 "Alice"。
+%d 被替换为整数变量 age 的值 25。
+%.2f 表示输出一个小数点后保留两位的浮点数，用 height 替换，输出 1.75。
+%c 被替换为字符变量 initial 的值 A。
 ```c
 // stdio:FILE类型贯穿始终，FILE是描述文件的结构体
 fopen();
@@ -175,16 +183,36 @@ SYNOPSIS
 // getc等同于fgetc，但是以宏的形式实现
 //用于从标准输入（stdin）中读取一个字符，不需要显式指定文件流。它等价于 getc(stdin)，默认从键盘读取输入
 // ungetc 是一个 C 标准库函数，用于将读取的字符“退回”到输入流中，这样它就可以在下一次读取时再次被读取。它可以用于标准输入 stdin 或文件流
-// *fgets可以从输入流接受多个字符并存储在字符串s中
+// *fgets可以从输入流接受多个字符并存储在指针s指向的buffer中，遇到'\n'或者EOF停止并返回s，如果到了文件末尾返回NULLbuffer最后一个位置会设置为'\0',
 ```
-
+fgetc 通常实现为一个函数，而 getc 可能实现为宏。
+这意味着在某些编译器或环境中，getc 的执行速度可能比 fgetc 更快，因为宏调用通常会比函数调用少一步压栈和返回的开销。
+## fputc(), putc(), putchar()
+```c
+NAME
+       fputc, fputs, putc, putchar, puts - output of characters and strings
+SYNOPSIS
+       #include <stdio.h>
+       int fputc(int c, FILE *stream);
+       int fputs(const char *s, FILE *stream);
+       int putc(int c, FILE *stream);
+       int putchar(int c);
+       int puts(const char *s);
+// fputc接受一个字符并输出到流中
+// 接受一个字符串，输出到流中
+// putc和fputc作用相同，putc用宏实现
+// puts是putc的特例，即putc(int c, stdout);
+```
 **实现**：一个复制文件的程序：
 ```c
 #include <stdio.h>
 #include <stdlib.h>
+#define BUFSIZE 1024
+
 int main(int argc, char** argv){
 	FILE *fps, *fpd;
-	int ch;
+	
+        char buf[BUFSIZE];
 	if(argc<3){
 		fprintf(stderr, "Usage:%s <src_file> <dest_file>\n",argv[0]);
 		exit(1);
@@ -200,17 +228,148 @@ int main(int argc, char** argv){
 		perror("fopen()");
 		exit(1);
 	}
+        // 字符实现
+        /*
+        int ch;
 	while(1){
 		ch = fgetc(fps);
 		if(ch == EOF)
 			break;
 		fputc(ch, fpd);
-	}	
-	fclose(fps);
+	} 
+        // fgets字符串实现
+        while(fgets(buf, BUFSIZE, fps)!=NULL)
+                fputs(buf, fpd);	
+        */
+        // fread实现
+        int n;
+        while((n = fread(buf, 1, BUFSIZE, fps)) > 0)
+		fwrite(buf,1, n, fpd);
+        fclose(fps);
 	fclose(fpd);
 }
 ```
-fgetc 通常实现为一个函数，而 getc 可能实现为宏。这意味着在某些编译器或环境中，getc 的执行速度可能比 fgetc 更快，因为宏调用通常会比函数调用少一步压栈和返回的开销。
+## fread() fwrite
+```c
+       #include <stdio.h>
+       size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+       size_t fwrite(const void *ptr, size_t size, size_t nmemb,
+                     FILE *stream);
+        // fread()/fwrite从流中读取/向流中写入nmemb数量item,每个size字节大小。存放在/读取ptr指针指向的buffer内存。返回成功读取/写入的对象的个数
+```
+
+## fprintf(), printf(),sprintf()
+```c
+ #include <stdio.h>
+       int printf(const char *format, ...);
+       int fprintf(FILE *stream, const char *format, ...);
+       // printf是printf的特例，等同于fprintf(stdout, const char *format, ...);
+       int sprintf(char *str, const char *format, ...);
+        // sprintf可以将多种类型按照格式符的形式放入字符串中，返回str字符个数
+```
+**实例**：
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(){
+	char buf[1024];
+	int year = 2024, month = 11, day = 6;
+	sprintf(buf, "%d=%d=%d", year,month, day);
+	puts(buf);
+	exit(0);
+}
+```
+## scanf(),fscanf(),sscanf()
+```c
+       #include <stdio.h>
+
+       int scanf(const char *format, ...);
+       int fscanf(FILE *stream, const char *format, ...);
+       int sscanf(const char *str, const char *format, ...);
+        // scanf从标准输入stdin中按照格式字符串中接受字符
+        //fscanf可以从指定文件流传入给格式字符串
+        //sscanf从一个字符串按照格式符输入
+```
+
+## fseek(),ftell()
+```c
+       #include <stdio.h>
+       int fseek(FILE *stream, long offset, int whence);
+       long ftell(FILE *stream);
+       // fseek是将文件流指针放到指定位置：offset是偏移值，whence有SEEK_SET, SEEK_CUR, or SEEK_END代表文件头，当前指针，文件尾三个位置;seek成功返回1否则返回0
+       // ftell返回文件流当前指针位置
+       void rewind(FILE *stream);
+        int fflush(FILE *stream); //刷新指定流，如果参数为空刷新所有流
+```
+缓冲区：
+行缓冲：换行刷新，满了刷新，将数据一次性写入目标文件或设备
+全缓冲：满了刷新，强制刷新，将数据写入目标文件或设备
+无缓冲：数据不经过缓冲区，每次调用 I/O 函数时都会直接输出或写入文件
+```c
+#include<stdio.h>
+#include<stdlib.h>
+int main(){
+printf("before");
+while(1);
+printf("arter");
+return 1;
+}
+不会输出before,如果使用printf("before");会输出before或者使用fflush(stdout)刷新缓冲区也可以输出
+```
+**实现**：读取文件大小
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv[]){
+        FILE *fps;
+        fps = fopen(argv[1]);
+        if(fps == NULL){
+                perror(fopen());
+                exit(0);
+        }
+        fseek(fps, 0, SEEK_END);
+        printf("%d", ftell(fps));
+        fclose(fps);
+        exit(1);
+}
+
+## getline
+```c
+ #include <stdio.h>
+       ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+       //getline获取一个指向buffer指针的指针，一个指向size_t表示缓冲区的大小，和一个FILE流；将第一行存入buffer中，如果buffer内存不够会自动分配大小；返回行的字节数或没有返回-1
+```
+**实例**：
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(int argc, char **argv){
+	FILE *fps;
+	char *buf = NULL;
+	size_t num = 0;
+	if(argc<2){
+		fprintf(stderr, "Usage:%s <src_file> \n",argv[0]);
+		exit(1);
+		}
+	fps = fopen(argv[1],"r");
+	if(fps == NULL){
+		perror("fopen()");
+		exit(1);
+		}
+	while(1){
+		if(getline(&buf, &num, fps) < 0){
+			printf("finish\n");
+			break;}
+		printf("%ld\n", strlen(buf));
+		printf("%ld\n", num);
+	}
+	fclose(fps);
+	exit(0);
+}
+```
 **试题1**：
 ```c
 char *ptr = "abc";
