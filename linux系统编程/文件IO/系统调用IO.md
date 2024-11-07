@@ -115,23 +115,34 @@ int main(int argc, char **argv){
     }
 
     char buf[BUFSIZE];
-    int cur_line = 0;
+    int cur_line = 1;
     long pos = 0;
     while(1){ 
-        if(cur_line >= TARGET_LINE){//第十行
+        if(cur_line == TARGET_LINE){//第十行
             printf("after:%s", buf);
             pos = ftell(fileread);
             
-            fseek(filewrite,pos-strlen(buf),SEEK_SET);
+            fseek(filewrite,pos,SEEK_SET);
             if(fgets(buf, BUFSIZE, fileread)==NULL)
-            	exit(1);
+            	break;
+            
+            fgets(buf, BUFSIZE, fileread); //11
             printf("%s", buf);
             fputs(buf,filewrite);
     
             printf("cur:%d\n", cur_line);
             
         }
-        else{
+        if(cur_line > TARGET_LINE){
+                   
+            if(fgets(buf, BUFSIZE, fileread)!=NULL){
+            	printf("d:%s", buf);}
+            	else{
+            	break;}
+            fputs(buf,filewrite);
+            printf("cur:%d\n", cur_line);
+        }
+        if(cur_line < TARGET_LINE){
             fgets(buf, BUFSIZE, fileread);
             printf("%s", buf);
         }
