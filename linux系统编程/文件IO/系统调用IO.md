@@ -91,7 +91,6 @@ int main(int argc, char **argv){
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/types.h>
 #include <string.h>
 #define BUFSIZE 1024
 #define TARGET_LINE 10
