@@ -291,16 +291,7 @@ int main(){
         //sscanf从一个字符串按照格式符输入
 ```
 
-## fseek(),ftell()
-```c
-       #include <stdio.h>
-       int fseek(FILE *stream, long offset, int whence);
-       long ftell(FILE *stream);
-       // fseek是将文件流指针放到指定位置：offset是偏移值，whence有SEEK_SET, SEEK_CUR, or SEEK_END代表文件头，当前指针，文件尾三个位置;seek成功返回1否则返回0
-       // ftell返回文件流当前指针位置
-       void rewind(FILE *stream);
-        int fflush(FILE *stream); //刷新指定流，如果参数为空刷新所有流
-```
+
 缓冲区：
 行缓冲：换行刷新，满了刷新，将数据一次性写入目标文件或设备
 全缓冲：满了刷新，强制刷新，将数据写入目标文件或设备
