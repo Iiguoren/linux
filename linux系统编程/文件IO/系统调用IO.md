@@ -34,6 +34,13 @@ lseek();
        ssize_t write(int fd, const void *buf, size_t count);
        // 向文件或文件描述符写入数据的系统调用。参数：文件描述符，buf的指针，要写入的字节数。返回实际写入的字节数（ssize_t 类型）。通常情况下，这个值等于 count，但在某些情况下可能小于 count（例如，磁盘空间不足）。失败返回-1
 ```
+
+```c
+#include <unistd.h>
+#include <fcntl.h>
+off_t lseek(int fd, off_t offset, int whence);
+// fseek的系统调用
+```
 ## 重构mycopy
 ```c
 #include <stdio.h>
@@ -99,7 +106,6 @@ int main(int argc, char **argv){
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/types.h>
 #include <string.h>
 #define BUFSIZE 1024
