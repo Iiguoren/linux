@@ -201,7 +201,7 @@ SYNOPSIS
 // fputc接受一个字符并输出到流中
 // 接受一个字符串，输出到流中
 // putc和fputc作用相同，putc用宏实现
-// puts是putc的特例，即putc(int c, stdout);
+// puts是fputs的特例，即putc(int c, stdout);
 ```
 **实现**：一个复制文件的程序：
 ```c
