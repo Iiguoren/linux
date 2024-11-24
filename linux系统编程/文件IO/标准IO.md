@@ -177,11 +177,11 @@ SYNOPSIS
        int fgetc(FILE *stream);  //定义为函数
        char *fgets(char *s, int size, FILE *stream);
        int getc(FILE *stream);  // 定义为宏
-       int getchar(void);
+       int getchar(void); // getc的特定形式，指定FILE为stdin
        int ungetc(int c, FILE *stream);
 // fgetc读取stream中的下一个字符并且返回一个字符转换的int型，或者返回EOF在文件末尾或者error情况下
-// getc等同于fgetc，但是以宏的形式实现
-//用于从标准输入（stdin）中读取一个字符，不需要显式指定文件流。它等价于 getc(stdin)，默认从键盘读取输入
+/* getc等同于fgetc，但是以宏的形式实现
+用于从标准输入（stdin）中读取一个字符，不需要显式指定文件流。它等价于 getc(stdin)，默认从键盘读取输入*/
 // ungetc 是一个 C 标准库函数，用于将读取的字符“退回”到输入流中，这样它就可以在下一次读取时再次被读取。它可以用于标准输入 stdin 或文件流
 // *fgets可以从输入流接受多个字符并存储在指针s指向的buffer中，遇到'\n'或者EOF停止并返回s，如果到了文件末尾返回NULL，buffer最后一个位置会设置为'\0'
 ```
@@ -292,10 +292,10 @@ int main(){
 ```
 
 
-缓冲区：
-行缓冲：换行刷新，满了刷新，将数据一次性写入目标文件或设备
-全缓冲：满了刷新，强制刷新，将数据写入目标文件或设备
-无缓冲：数据不经过缓冲区，每次调用 I/O 函数时都会直接输出或写入文件
+### 缓冲区：
+**行缓冲**：换行刷新，满了刷新，将数据一次性写入目标文件或设备，stdin,stdout默认行缓存
+**全缓冲**：满了刷新，强制刷新，将数据写入目标文件或设备，文件io默认全缓冲
+**无缓冲**：数据不经过缓冲区，每次调用 I/O 函数时都会直接输出或写入文件
 ```c
 #include<stdio.h>
 #include<stdlib.h>
