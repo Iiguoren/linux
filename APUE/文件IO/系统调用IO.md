@@ -29,7 +29,7 @@ lseek();
 ```c
        #include <unistd.h>
        ssize_t read(int fd, void *buf, size_t count);
-       // 根据文件描述符读取文件数据，参数：文件描述符，缓冲区的指针，读取的最大字节数；返回实际读取的字节数，若为0则到达文件末尾；是啊比则-1   
+       // 根据文件描述符读取文件数据，参数：文件描述符，缓冲区的指针，读取的最大字节数；返回实际读取的字节数，若为0则到达文件末尾；否则-1   
        #include <unistd.h>
        ssize_t write(int fd, const void *buf, size_t count);
        // 向文件或文件描述符写入数据的系统调用。参数：文件描述符，buf的指针，要写入的字节数。返回实际写入的字节数（ssize_t 类型）。通常情况下，这个值等于 count，但在某些情况下可能小于 count（例如，磁盘空间不足）。失败返回-1

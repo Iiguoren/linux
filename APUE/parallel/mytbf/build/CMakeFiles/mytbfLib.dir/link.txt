@@ -1,0 +1,3 @@
+D:\cmake\bin\cmake.exe -E rm -f CMakeFiles\mytbfLib.dir/objects.a
+C:\PROGRA~1\mingw64\bin\ar.exe qc CMakeFiles\mytbfLib.dir/objects.a @CMakeFiles\mytbfLib.dir\objects1.rsp
+C:\PROGRA~1\mingw64\bin\gcc.exe -shared -o libmytbfLib.dll -Wl,--out-implib,libmytbfLib.dll.a -Wl,--major-image-version,0,--minor-image-version,0 -Wl,--whole-archive CMakeFiles\mytbfLib.dir/objects.a -Wl,--no-whole-archive @CMakeFiles\mytbfLib.dir\linkLibs.rsp

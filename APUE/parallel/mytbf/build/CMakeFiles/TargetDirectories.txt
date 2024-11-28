@@ -1,0 +1,4 @@
+D:/vscode project/markdown/linux/DPUE/parall/mytbf/build/CMakeFiles/mytbfLib.dir
+D:/vscode project/markdown/linux/DPUE/parall/mytbf/build/CMakeFiles/tbf.dir
+D:/vscode project/markdown/linux/DPUE/parall/mytbf/build/CMakeFiles/edit_cache.dir
+D:/vscode project/markdown/linux/DPUE/parall/mytbf/build/CMakeFiles/rebuild_cache.dir

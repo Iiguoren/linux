@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(animal C)
+add_library(mytbfLib SHARED mytbf.c)
+add_executable(tbf main.c)
+target_link_libraries(tbf PUBLIC mytbfLib)
