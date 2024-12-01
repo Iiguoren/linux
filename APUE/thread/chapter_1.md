@@ -1,0 +1,189 @@
+# 线程
+1. 线程的概念：
+    一个正在运行的函数
+    posix:posix是一套标准而不是实现，其余标准还有openmp线程  
+    线程标识:`pthread_t`
+2. 线程的创建
+    线程终止
+    栈清理
+    线程的取消选项
+3. 线程同步
+4. 线程属性
+    线程同步的属性
+5. 线程与信号的关系
+    线程与fork
+    重入
+
+ps -axm中进程下面的-是线程记录，一个-表示一个线程
+ps -ax -L 同一个pid有多个lip，lip表示一个线程
+
+int pthread_equal()比较两个线程ID如果相同返回非0，不同返回0
+pthread_t pthread_self() 获取当前线程表示
+
+```c
+CFLAGS+=pthread
+LDFLAGS+=-pthread
+```
+## 线程创建
+pthread_create 创建一个新的线程
+```c 
+#include <pthread.h>
+int pthread_create(
+    pthread_t *thread,               // 输出参数，存储线程的标识符
+    const pthread_attr_t *attr,      // 线程属性（可以为 NULL，表示默认属性）
+    void *(*start_routine)(void *),  // 新线程开始执行的函数
+    void *arg                        // 传递给新线程的参数
+);
+成功返回0失败返回errorno<使用stringerr报错>
+```
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+static void clean_fun(void *arg){
+    puts(arg);
+}
+
+static void *func(void *p){
+    puts("This thread is working!");
+    pthread_cleanup_push(clean_fun,"1");
+    pthread_cleanup_push(clean_fun,"2");
+    pthread_cleanup_push(clean_fun,"3");
+
+    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(1);
+    
+    pthread_exit(NULL);
+}
+
+int main(){
+    pthread_t tid;
+    int err;
+    puts("BEGIN!");
+    err=pthread_create(&tid , NULL, func, NULL);
+    if (err) {
+    fprintf(stderr, "pthread_create: %s\n", strerror(err));
+    exit(1);
+	}	
+    pthread_join(tid, NULL);
+    puts("end!");
+    exit(0);
+}
+---------------------------------------------------------------
+BEGIN!
+This thread is working!
+3
+2
+1
+end!
+```
+## 线程终止
+1. 线程从启动例程中返回，返回值线程的退出码
+2. 线程被同一进程中的其他线程取消
+3. 线程调用pthread_exit()函数
+```c
+#include <pthread.h>
+void pthread_exit(void *retval);
+retval: 指向线程退出时返回的数据的指针。
+```
+结束当前线程。
+调用注册的清理处理函数（通过 pthread_cleanup_push 注册）。
+释放线程资源。
+注意: 如果线程的主函数返回，而没有显式调用 pthread_exit，线程会隐式调用 pthread_exit。
+## pthread_join()
+mian线程回收线程
+功能: 等待一个指定线程终止并获取其退出状态（返回值）。
+
+```c
+#include <pthread.h>
+int pthread_join(pthread_t thread, void **retval);
+/*
+thread: 要等待的线程标识符。
+retval: 用于存储线程退出时的返回值（pthread_exit 的参数）。
+成功时返回 0。
+失败时返回错误代码（如线程不存在或已被分离）.
+*/
+```
+
+作用:
+**阻塞当前线程，直到指定线程结束。
+获取被等待线程的返回值。**
+* 一个线程只能被 pthread_join 等待一次。
+* 分离线程（通过 pthread_detach）不能被 pthread_join。
+
+## pthread_cleanup_push() pthread_cleanup_pop()
+**用于在一个线程中注册和启动清理函数的，它为当前线程注册清理函数。**
+```c
+#include <pthread.h>
+void pthread_cleanup_push(void (*routine)(void *), void *arg);
+/*
+用于在线程退出时执行必要的清理操作（释放资源、关闭文件等）。
+注册的清理函数在以下情况下被调用：
+线程调用 pthread_exit。
+线程被取消。
+代码显式调用 pthread_cleanup_pop(1)。
+routine: 清理函数。
+arg: 传递给清理函数的参数。
+*/
+
+void pthread_cleanup_pop(int execute);
+//解除对清理函数的注册，并在需要时调用它。
+//execute: 如果为非零值，立即调用清理函数；否则仅取消注册。
+```
+**pthread_cleanup_push()必须与 pthread_cleanup_pop 成对出现。**
+
+通常在需要保证清理资源的代码块中使用。
+
+当线程在 pthread_cleanup_push 和 pthread_cleanup_pop 之间被取消时，pthread_cleanup_pop(0) 作为一个“标记”，确保清理函数在被取消时不会执行。这意味着虽然线程被取消了，并且正处于取消过程中，但不会执行那些在 pthread_cleanup_push 中注册的清理函数。
+
+之所以线程取消时能够跳过清理函数，是因为 pthread_cleanup_pop(0) 会告知线程，在该取消点（即线程被取消时）时，跳过这个清理函数。这一操作是在清理栈上通过标记的方式进行的，而不是依赖于线程是否已经到达 pthread_cleanup_pop。
+## pthread_cancel()
+线程取消有两种状态：允许和不允许
+异步cancel（直接取消线程并执行清理函数）和推迟cancel->推迟到cancel点响应
+cancel点：posix中，都是可能引发阻塞的系统调用
+pthread_setcancelstate()设置是否允许取消
+pthread_setcanceltype()设置取消方式 
+pthread_testcancel()什么都不做是一个cancel点
+###  线程分离pthread_detach(pthread_t thread)
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h>
+#define LEFT 30000000
+#define RIGHT 30000200
+#define THREAD_NUM 201
+struct str_int{
+    int i;
+}
+int main(){
+    pthread_t tid;
+    int i;
+    struct str_int si;
+    for(i = LEFT; i<RIGHT; i++){
+        int err = pthread_create(&tid, NULL, thread_func, );
+        if(err < 0 ){
+            printf("pthread_create():%s"strerror(err));
+            exit(1);
+        }
+        if(pid == 0){
+            for(j = 2; j<i/2; j++){
+                if(i % j == 0)
+                    break;
+            }
+            if(j == i/2){
+                printf("%d is a primer.\n", i);}
+            exit(0);
+        	}
+        }
+    for(i = LEFT; i<RIGHT; i++){
+        wait(NULL);
+    }
+    printf("main over.\n");
+    exit(0);
+}
+```
