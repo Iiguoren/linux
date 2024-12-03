@@ -13,7 +13,7 @@ struct  mytbf_st{
     int pos;
     int burst;
     int token;
-}
+};
 
 static void alrm_handler(int pos){
     int i;
