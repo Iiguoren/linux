@@ -41,7 +41,7 @@ int get_free_pos(){
 //释放令牌桶
 static void module_unload(){
     int i;
-    signal(SIGALRM,alarm_handler_save);
+    signal(SIGALRM,alarm_handler_save); //恢复信号处理函数
     alarm(0);
     for(i = 0;i<TBFSIZE;i++){
         free(job[i]);
@@ -74,6 +74,7 @@ mytbf_t *mytbf_init(int cps,int burst){
     job[pos] = tbf;
     return tbf;
 }
+
 int mytbf_fetchtoken(mytbf_t *ptr, int num)
 {
     struct mytbf_st *tbf = ptr;
