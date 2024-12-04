@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.15)
+
+project(sem C)
+add_library(mysemLib SHARED mysem.c)
+add_executable(sem main.c)
+target_link_libraries(sem PUBLIC mysemLib)
+find_package(Threads REQUIRED)
+target_link_libraries(sem PRIVATE Threads::Threads)
