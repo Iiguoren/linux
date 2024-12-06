@@ -16,8 +16,8 @@ lseek();
        int open(const char *pathname, int flags);
        int open(const char *pathname, int flags, mode_t mode);
        int creat(const char *pathname, mode_t mode);
-       // open没有缓冲区机制，而且open采用文件模式标志控制文件流:O_RDONLY(只读)、O_WRONLY(只写)、O_RDWR(读写)、O_CREAT(生成)、O_APPEND(追加)、O_TRUNC(截断);返回文件描述符，失败则返回-1
-       // mode_t mode表示O_CREAT创建的文件权限，输入的参数&~umask;
+       /* open没有缓冲区机制，而且open采用文件模式标志控制文件流:O_RDONLY(只读)、O_WRONLY(只写)、O_RDWR(读写)、O_CREAT(生成)、O_APPEND(追加)、O_TRUNC(截断),O_NONBLOCK：非阻塞模式。如果没有数据可读，read 调用会立即返回，不会阻塞进程。;返回文件描述符，失败则返回-1
+        mode_t mode表示O_CREAT创建的文件权限，输入的参数&~umask;*/
 ```
 ```c
        #include <unistd.h>
