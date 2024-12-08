@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.15)
+project(relay C)
+add_library(myRelay SHARED relay.c)
+add_executable(relay main.c)
+target_link_libraries(relay PUBLIC myRelay)
+# 等价于 CFLAGS+=-pthread
+target_compile_options(relay PRIVATE -pthread)
+
+# 等价于 LDFLAGS+=-pthread
+target_link_libraries(relay PRIVATE -pthread)
