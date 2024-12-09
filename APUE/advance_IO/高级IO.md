@@ -222,7 +222,7 @@ select 是一个同步的多路复用机制，用于等文件描述符中的事�
 
 函数执行的监视结果放置在三个set里面。
 如果时间为 {0, 0}，select 将立即返回。
-`select(-1,NULL,NULL,NULL,timeout)`一个安全的休眠函数。
+`select(-1,NULL,NULL,NULL,timeout)`一个安全的**休眠函数**。
 
 ### poll()
 poll 函数是 Linux 系统中用来监测一组文件描述符的事件（如读、写或异常）的多路复用系统调用，常用于实现 I/O 多路复用。它允许程序在一个或多个文件描述符上等待事件发生，并提供一个统一的方法来处理多个输入/输出流。是用来监视多个文件描述符的状态变化的
@@ -231,9 +231,11 @@ poll 函数是 Linux 系统中用来监测一组文件描述符的事件（如�
 #include <poll.h>
 int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 ```
+
 **struct pollfd *fds**
 是一个指向 pollfd 结构体数组的指针。
 每个 pollfd 结构体代表一个文件描述符及其关联的事件。
+
 ```c
 struct pollfd {
     int   fd;       // 文件描述符
@@ -284,10 +286,6 @@ struct fsm_st{
     char *errstr;
 };
 
-fd_set rset, wset;
-static int max(int a, int b){
-	return a>b?a:b;
-}
 static void fsm_driver(struct fsm_st *fsm){
 /************************/
 }
@@ -312,7 +310,7 @@ static void relay(int fd1,int fd2){
     // 防止while循环一直进行使用poll进行阻塞
     while(fsm12.state != STATE_T || fsm21.state!=STATE_T)//如果不是T态，循环
     {	// 布置events
-    	pfd[0].events = 0;
+    	pfd[0].events = 0; //每次清零
     	// 若交换机12为读态，fd1监视输入事件
     	if(fsm12.state == STATE_R)
     		pfd[0].events |= POLLIN;
@@ -458,9 +456,9 @@ static void relay(int fd1,int fd2){
 
         if(fsm12.state<3&&fsm21.state<3){
         	// 等待对应fd可读可写
-	    	while(epoll_wait(epfd,&ev,1,-1) <0){
+	    	while(epoll_wait(epfd,&ev,1,-1) <0){// 这里不会影响epfd需要add/ctl操作才可以改变epfd
 	    		if(errno == EINTR)
-	    			continue; // 由于每次select都会将selcet捕获的结果放到set中，所以要重新设置set
+	    			continue; 
 	    		perror("epoll():");
 	    		exit(1);
 	    			
@@ -481,10 +479,14 @@ static void relay(int fd1,int fd2){
     fcntl(fd2, F_SETFL, fd2_save); //恢复
 }
 ```
-
+## 内存映射
 多个小内存空间写入
 把内存中的内容 或者 某一个文件的内容 映射到当前进程空间中来
+
+### mmap()
+加载文件到内存中以便快速访问。
 ```c
+#include <sys/mman.h>
 mmap(void *addr,size_t length,int prot,int flags,int fd,odd_t offset);
 /*
 addr:
@@ -501,7 +503,7 @@ flags:
 设置映射的类型和属性。常见值：
 MAP_SHARED: 映射的内存对其他进程共享，修改会同步到文件或设备。
 MAP_PRIVATE: 修改映射的内存不会影响文件，是写时复制的。
-MAP_ANONYMOUS: 匿名映射，不与文件关联，通常与 fd = -1 搭配使用。
+MAP_ANONYMOUS: 匿名映射，不与文件关联，通常与 fd = -1 搭配使用。实验-1没有匿名报错
 fd:
 打开的文件描述符。如果是匿名映射，设为 -1。
 offset:
@@ -510,6 +512,12 @@ offset:
 成功：返回映射的内存地址。
 失败：返回 MAP_FAILED，同时设置 errno。
 */
+```
+
+### munmap()
+解除 mmap 创建的内存映射，释放资源。
+```c
+#include <sys/mman.h>
 munmap(void *addr,size_t length)
 /*
 addr:
@@ -533,3 +541,42 @@ array[0] = 42;
 munmap(addr, length);
 ```
 与传统内存分配不同，mmap 映射的内存段直接映射到内核空间或文件，因此需要严格管理其生命周期。
+
+```c
+//mmap.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#define MEMSIZE 1024
+int main(){
+    char *ptr;
+    pid_t pid;
+    // -1没有MAP_ANONYMOUS会报错
+    ptr = mmap(NULL,1024,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    if(ptr == MAP_FAILED){
+        perror("mmap()");
+        exit(1);
+    }
+    pid = fork();
+    if(pid<0){
+        perror("fork");
+        munmap(ptr, MEMSIZE);
+        exit(1);
+    }
+    if(pid == 0){
+        strcpy(ptr, "hello world!\n");
+        munmap(ptr, MEMSIZE);
+        exit(0);
+    }
+    else{
+        wait(NULL);
+        puts(ptr);
+        munmap(ptr, MEMSIZE);
+        exit(0);
+    }
+}
+```
