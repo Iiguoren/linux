@@ -10,7 +10,7 @@
 #define THRNUM 20
 #define FILEPATH "/etc/out"
 #define BUFSIZE 1024
-
+// 没有编译过
 static P(){
     struct sembuf op;
     op.sem_num = 0; // 先设置数组，再使用op结构体操作
