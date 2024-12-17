@@ -21,6 +21,14 @@ int main(){
         perror("socket()");
         exit(1);
     }
+    struct ip_mreqn mreq;
+    inet_pton(AF_INET, MULTGROUT, &mreq.imr_multiaddr);
+    inet_pton(AF_INET, "0.0.0.0",&mreq.imr_address);
+    mreq.imr_ifindex = if_nametoindex("eth0");
+    if(setsockopt(sd,IPPROTO_IP,IP_ADD_MEMBERSHIPK,&mreq,sizeof(mreq)) < 0){
+        perror("setsockopt()");
+        exit(1);
+    }
     laddr.sin_family = AF_INET;
     laddr.sin_port = htons(atoi(RCVPORT)); // 字符串转Int同时port需要传到network端，将本地字节序转网络字节序
     // "0.0.0.0"通用地址，转换为自己的IP

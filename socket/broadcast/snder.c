@@ -18,6 +18,11 @@ int main(int argc, char* argv[]){
         perror("socket()");
         exit(1);
     }
+    int val = 1;
+    if(setsockopt(sd,SOL_SOCKET,SO_BROADCAST,&val,sizeof(val)) < 0){
+        perror("setsockopt()");
+        exit(1);
+    }
     // bind 可以不要Bind
     strcpy(sbuf.name , "alle");
     sbuf.math = htonl(rand()%100);
@@ -25,8 +30,8 @@ int main(int argc, char* argv[]){
 
     raddr.sin_family= AF_INET;
     raddr.sin_port = htons(atoi(RCVPORT));
-    inet_pton(AF_INET, argv[1], &raddr.sin_addr); // ip->大整数
-    // 发送sbuf内容到raddr的ip和端口
+    inet_pton(AF_INET, "255.255.255.255", &raddr.sin_addr); // ip->大整数
+    // 发送sbuf内容到rad.dr的ip和端口
     if(sendto(sd, &sbuf, sizeof(sbuf), 0,(void *)&raddr, sizeof(raddr))<0)
         {
             perror("sendto()");

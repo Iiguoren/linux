@@ -295,4 +295,128 @@ EFAULT：缓冲区指针无效。
 EINVAL：参数无效。
 */
  ```
- ## 
+
+ ## 多点通讯
+ 只能报式套接字
+* 广播：全网广播，子网广播
+* 多播/组播：
+
+
+### 广播：
+服务器发送的IP设置为255.255.255.255。 这是一个特殊的广播地址，用于在当前的网络中向所有设备发送数据包。
+这种广播包只能发送到本地网络（局域网，LAN），不会被路由器转发到其他网络。
+**只是将ip改为255.255.255.255是不能实现广播，默认socket设置是禁止的**
+ip层
+tcp层
+dcp层
+socket层
+`man 7 socket`查看socket层面设置
+SO_BROADCAST
+
+通过setsockopt函数设置socket层的广播属性
+```c
+#include <sys/socket.h>
+int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+/*
+sockfd：套接字描述符。
+level：选项所在的协议层级。
+    SOL_SOCKET：套接字层选项。
+    IPPROTO_IP：IP 层选项（如 IP 多播）。
+    IPPROTO_TCP：TCP 层选项。
+    IPPROTO_UDP：UDP 层选项。
+optname：具体要设置的选项名称。
+optval：指向选项值的指针，表示选项的新值。
+optlen：optval 所指内存的大小（字节数）。
+返回值
+成功：返回 0。
+失败：返回 -1，并设置 errno。
+*/
+```
+```c
+#include <sys/socket.h>
+int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+/*
+sockfd：套接字描述符。
+level：选项所在的协议层级（如 SOL_SOCKET、IPPROTO_TCP 等）。
+optname：具体要获取的选项名称。
+optval：用于存储选项值的缓冲区指针。
+optlen：指向一个整数变量，表示 optval 缓冲区的大小，函数返回时该变量表示实际选项值的大小。
+返回值
+成功：返回 0。
+失败：返回 -1，并设置 errno。
+*/
+```
+
+### 组播
+组播是一种将消息发送给一组特定主机（属于多播组）的通信方法。使用 多播地址（D类IP地址），范围是 224.0.0.0 到 239.255.255.255。消息只会被加入该组的主机接收，而不是网络内的所有主机。
+`man 7 ip`
+```c
+struct ip_mreqn {
+    struct in_addr imr_multiaddr;  /* 多播组的 IP 地址 */
+    struct in_addr imr_address;    /* 本地接口的 IP 地址 */
+    int            imr_ifindex;    /* 网络接口的索引号（可以指定接口） */
+};
+/*如果知道网络接口的索引号（通过 if_nametoindex() 获取），可以设置这个字段。
+如果不使用索引号，将其设置为 0，系统会自动选择合适的接口。*/
+```
+向多播组发送信息
+`IP_MULTICAST_IF`是一个用于配置多播发送接口的套接字选项，通过setsockopt()设置。它指定了当一个主机有多个网络接口时，多播数据包应该从哪个接口发送出去。
+
+```c
+struct ip_mreqn mreq;
+inet_pton(AF_INET, MULTGROUT, &mreq.imr_multiaddr);
+inet_pton(AF_INET, "0.0.0.0",&mreq.imr_address);
+mreq.imr_ifindex = if_nametoindex("eth0");
+setsockopt(sd,IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq)) //设置以自身哪个IP和网络接口组播发送套接字
+inet_pton(AF_INET, MULTGROUT, &raddr.sin_addr); // 组播ip->大整数
+// 发送sbuf内容到组播的ip和端口
+sendto(sd, &sbuf, sizeof(sbuf), 0,(void *)&raddr, sizeof(raddr))
+```
+加入多播组
+```c
+struct ip_mreqn mreqn;
+inet_pton(AF_INET, "239.0.0.1", &mreqn.imr_multiaddr); // 多播组地址
+mreqn.imr_address.s_addr = htonl(INADDR_ANY);          // 使用任意本地接口
+mreqn.imr_ifindex = if_nametoindex("eth0");
+
+setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreqn, sizeof(mreqn))
+```
+
+### memset
+
+## UDP
+丢包->阻塞->流控
+丢包是由阻塞造成的(网络被路由器或其他网络节点按照某种算法移除),而不是ttl
+**停等式流控**
+c->s:请求文件路径数据
+s->c:Data1
+c->s:ack
+s->c:Data2
+c->s:ack
+s->c:EOT
+中途如果有ACK包Server没有成功收到那么将会再次发送数据包
+**问题：是否降低了丢包率**
+没有，因为ack也可能丢失，停等式是降低效率保证数据包的接受
+TTL time to live 数据包跳转的路由数
+
+
+# 流式套接字
+C端（主动端）
+1. 获取SOCKET
+2. 给SOCKET取得地址(可省)
+3. 发送连接
+4. 收/发消息
+5. 关闭
+
+S端（被动端）
+1. 获取SOCKET
+2 给SOCKET取得地址
+3 将SOCKET设置为监听模式
+4 接受连接
+5 收/发消息
+6 关闭
+
+S端：
+如果未收回socket用ctrl c关闭，该端口会处于wait状态，片刻后内核自动收回
+SO_REUSEADDR，对未及时回收的端口使用
+

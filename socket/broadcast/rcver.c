@@ -21,6 +21,11 @@ int main(){
         perror("socket()");
         exit(1);
     }
+    int val = 1;
+    if(setsockopt(sd,SOL_SOCKET,SO_BROADCAST,&val,sizeof(val)) < 0){
+        perror("setsockopt()");
+        exit(1);
+    }
     laddr.sin_family = AF_INET;
     laddr.sin_port = htons(atoi(RCVPORT)); // 字符串转Int同时port需要传到network端，将本地字节序转网络字节序
     // "0.0.0.0"通用地址，转换为自己的IP
