@@ -420,3 +420,41 @@ S端：
 如果未收回socket用ctrl c关闭，该端口会处于wait状态，片刻后内核自动收回
 SO_REUSEADDR，对未及时回收的端口使用
 
+### accept()
+ TCP中服务器端的监听套接字上接受一个 已建立的客户端连接，并返回一个新的套接字（即 连接套接字），该套接字可以用于与客户端的通信。
+```c
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+sockfd：监听套接字的文件描述符，通常是通过调用 socket() 创建的，然后调用 bind() 和 listen() 进行设置。
+addr：一个指向 struct sockaddr 类型的指针，用于存放客户端的地址信息。如果该参数不为 NULL，accept() 会将连接客户端的 IP 地址和端口信息填充到该结构中。
+addrlen：表示 addr 结构体的大小。调用 accept() 时，系统会通过该参数返回实际的地址长度。
+```
+
+## fdopen()
+它允许你通过已有的文件描述符（int 类型）来创建一个FILE流。
+你就可以利用标准的文件流操作函数（如fread,fwrite,fprintf,fscanf,fclose 等）来操作非标准的文件描述符。这对于文件描述符的管理和更灵活的文件操作非常有用。
+```c
+FILE *fdopen(int fd, const char *mode);
+fd：这是你已经打开的文件描述符。通常是通过 open 或 socket 等函数获得的一个整数。该文件描述符必须是有效的，并且通常指向一个已经打开的文件或套接字。
+mode：这个参数是一个字符串，用来指定打开流的模式。
+```
+### fscanf()
+```c
+fscanf 是 C 标准库中的一个输入函数，类似于 scanf，但它是从一个已经打开的文件流中读取数据，而不是从标准输入（如键盘）。通过使用 fscanf，你可以从文件中按指定的格式读取数据。
+int fscanf(FILE *stream, const char *format, ...);
+stream：文件流，通常是由 fopen 或 fdopen 等函数返回的 FILE * 类型指针，指向打开的文件。
+format：格式字符串，指定输入数据的格式。它和 scanf 使用的格式化字符串一样，用于指定如何解析输入的数据。
+后面的可变参数，fscanf 会根据 format 中指定的格式将从文件中读取的数据存储到这些参数中。
+```
+### connect()
+connect 是一个系统调用，用于在客户端与服务器之间建立连接。它通常用于 客户端 程序中，将套接字与远程主机的 IP 地址和端口进行绑定，以便能够向远程主机发送和接收数据。
+```c
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+/*
+sockfd：已创建的套接字的文件描述符。该套接字应当是通过 socket() 系统调用创建的，且应该是一个有效的套接字。
+addr：指向一个 sockaddr 结构的指针。该结构包含目标主机的地址和端口信息。通常，你会使用 sockaddr_in 结构来描述 IPv4 地址，sockaddr_in6 来描述 IPv6 地址。
+addrlen：addr 结构的大小。通常使用 sizeof(struct sockaddr_in) 或 sizeof(struct sockaddr_in6) 来指定。
+返回值：
+成功：返回 0。
+失败：返回 -1，并设置 errno，通常可以通过 perror 或 strerror 函数获取错误信息。
+*/
+```

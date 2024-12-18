@@ -19,14 +19,16 @@ int main()
     struct sockaddr_in laddr; //当前IP
     struct sockaddr_in raddr; 
     socket_t raddr_len;
+    pid_t pid;
     if(sd<0){
         perror();
         exit(1);
     }
-    int val;
+    // 解决没有close导致Bind buzy的问题
+    int val =1;
     if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val))<0)
     {
-        perror("setsockopt");
+        perror("setsockopt()");
         exit(1);
     }
     laddr.sin_family = AF_INET;
@@ -41,15 +43,31 @@ int main()
     raddr_len = sizeof(raddr);
     while(1){
         int newsd;
+        // accept()????
         newsd = accept(sd,(void *)&raddr.sin_addr, &raddr_len);
         if(newsd<0) // 在socket进行连接建立
         {
             perror();
             exit(1);
+        } 
+        pid = fork();
+        if(pid<0){
+            perror();
+            exit(1);
         }
-        server_job(newsd);
-        close(newsd);
-        //send();
+        if(pid == 0){
+            /*!!!!*/
+            // 关闭自己进程中不需要的文件描述符
+            close(sd);
+            inet_ntop(AF_INET, &raddr.sin_addr, ipstr, 1024);
+            server_job(newsd);
+            close(newsd);
+            //send();
+            exit(0);
+        }
+        /*!!!*/
+        close(newsd); 
+        // 这里关闭newsd是为了防止子进程close(newsd)后父进程抓着newsd导致缓冲区不刷新
     }
     
     close(sd);
