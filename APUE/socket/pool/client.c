@@ -1,5 +1,13 @@
-
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <math.h>
+#include <string.h>
 
 #include "proto.h"
 
@@ -14,7 +22,7 @@ int main(int argc, char *argv[]){
     }
     sd = socket(AF_INET, SOCK_STREAM, 0);
     if(sd<0){
-        perror();
+        perror("socket()");
         exit(1);
     }
 
@@ -22,9 +30,9 @@ int main(int argc, char *argv[]){
     raddr.sin_family = AF_INET;
     // 接受服务器数据从网络端到主机端
     raddr.sin_port = htons(atoi(SERVERPORT));
-    inet_pton(AF_INET, argv[1],raddr.sin_addr);
+    inet_pton(AF_INET, argv[1],&raddr.sin_addr);
     if(connect(sd, (void *)&raddr, sizeof(raddr))<0){
-        perror();
+        perror("connect()");
         exit(1);
     }
     fp = fdopen(sd, "r+");
@@ -36,10 +44,10 @@ int main(int argc, char *argv[]){
 
     }
     else
-        fprintf(stdout, "stamd = %lld\n", stamp);
+        fprintf(stdout, "stamp = %lld\n", stamp);
     fclose(fp);
     //rcev()
     //close();
-    exit();
+    exit(0);
 
 }
