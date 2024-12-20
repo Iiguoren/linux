@@ -24,7 +24,7 @@
 #define IPSTRSIZE 1024
 enum
 {
-    STATE_IDEL = 0;
+    STATE_IDEL = 0,
     STATE_BUZY
 };
 struct service_st
@@ -34,18 +34,20 @@ struct service_st
     //int reuse;
 };
 static struct service_st *serverpool;
+static int sd;
 static int idle_count = 0, buzy_count = 0;
 static void server_job(int pos){
     int ppid;
     int client_sd;
     char ip[IPSIZE];
     struct sockaddr_in raddr;
-    ppid = getpid();
+    socklen_t raddr_len = sizeof(raddr);
+    ppid = getppid(); // 获取父进程PID
     while(1){
         serverpool[pos].state = STATE_IDEL;
         kill(ppid, SIG_NOTIFY);
         client_sd = accept(sd, (void *)&raddr, &raddr_len);
-        if(clien_sd < 0){
+        if(client_sd < 0){
             if(errno != EINTR||errno !=EAGAIN)
             {
                 perror("accept()");
@@ -118,10 +120,10 @@ static void scan_pool(void){
             continue;
         }
         //统计进程池的状态
-        if(serverpool[i].state == STATE_IDLE)
+        if(serverpool[i].state == STATE_IDEL)
           idle++;
-        else if(serverpool[i].state == STATE_BUSY)
-          busy++;
+        else if(serverpool[i].state == STATE_BUZY)
+          buzy++;
         else{
             fprintf(stderr,"未知状态!\n");
             abort();
@@ -129,7 +131,7 @@ static void scan_pool(void){
         }
     }
     idle_count = idle;
-    busy_count = busy;
+    buzy_count = buzy;
 }
 static int del_one_server(void){
     int i;
@@ -148,28 +150,29 @@ static int del_one_server(void){
 }
 
 static void usr2_handler(int s){
-
+	//printf("1111\n");
+	return;
 }
 
 int main(){
-    int sd;
     int val = 1;
     int i;
     struct sockaddr_in laddr;
 
-    // 子进程结束自行消亡
-    struct sigaction sa, osa, set;
+    // 子进程结束自行消亡，不去通知父进程
+    struct sigaction sa, osa; 
     sigemptyset(&sa.sa_mask);
     sa.sa_flags=SA_NOCLDWAIT;
     sa.sa_handler = SIG_IGN;
+    //SIGCHLD用于通知父进程：子进程已经终止或停止执行，关闭
+    sigaction(SIGCHLD, &sa, &osa); // 定义SIGCHLD新行为，就行为放到osa
 
+    // 先屏蔽NOTIFY，在初始化完成之前不要打扰，在SUSPEND函数中会自动将OSET屏蔽将NOTIFY激活
+    sigset_t set, oset;
     sigemptyset(&set);
     sigaddset(&set, SIG_NOTIFY);
-    sigprocmack(SIG_BLOCK, &set, &oset);
+    sigprocmask(SIG_BLOCK, &set, &oset);
 
-    //SIGCHLD用于通知父进程：子进程已经终止或停止执行
-    sigaction(SIGCHLD, &sa, &osa); // 定义SIGCHLD新行为，就行为放到osa
-    
     sa.sa_handler = usr2_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
@@ -177,7 +180,7 @@ int main(){
 
     serverpool = mmap(NULL, sizeof(struct service_st) * MAXCLIENT, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     for(i = 0;i<MAXCLIENT;i++){
-        severpool[i].pid = -1;
+        serverpool[i].pid = -1;
     }
     if(serverpool == MAP_FAILED){
         perror("mmap()");
@@ -189,16 +192,17 @@ int main(){
         exit(1);
     }
     
-    if(setsockopt(ad, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
     {
         perror("setsockopt()");
         exit(1);
     }
     laddr.sin_family = AF_INET;
-    laddr.sin_port = htons(atoi(SERVERPROT));
-    iner_pton(AF+INET, "0.0.0.0",&laddr.sin_addr);
-    if(bind(sd, (void *)&laddr, size(laddr))){
-
+    laddr.sin_port = htons(atoi(SERVERPORT));
+    inet_pton(AF_INET, "0.0.0.0",&laddr.sin_addr);
+    if(bind(sd, (void *)&laddr, sizeof(laddr))<0){
+	perror("bind()");
+	exit(1);
     }
     if(listen(sd, 100)<0){
         perror("listen()");
@@ -208,9 +212,10 @@ int main(){
     for(int i = 0; i<MINSPARESERVER;i++){
         add_one_server();
     }
-
     while(1){
+    // 信号驱动，当子进程状态变化，通知父进程
         sigsuspend(&oset);
+        //printf("!\n");
         scan_pool();
         if(idle_count > MAXSPARESERVER){
             for(i = 0; i<idle_count-MAXSPARESERVER;i++)
@@ -229,13 +234,14 @@ int main(){
             else if(serverpool[i].state == STATE_IDEL)
                     putchar('.');
                 else
-                    puts('x');
+                    putchar('x');
+            fflush(NULL);
         }
         putchar('\n');
         //ctrl_pool();
 
     }
 
-    sigprockmask(SIG_SETMASK, &oset, NULL);
+    sigprocmask(SIG_SETMASK, &oset, NULL);
     exit(0);
 }
