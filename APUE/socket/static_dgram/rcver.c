@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "proto.h"
-
+// 配置服务端ip端口/客户端ip端口->bind->recvfrom->sendto
 int main(){
     int sd; // 文件描述符
     struct sockaddr_in laddr; // 本地地址和端口
@@ -36,7 +36,7 @@ int main(){
     while (1)
     {
         // 用套接字sd接受raddr传输的数据，存储在rbuf中,接受其ip和端口存储在raddr
-        // 报式套接字每次通信都需要知道对方是谁
+        // DGRAM不会分配一个socket来建立持久的通讯，因此报式套接字每次通信都需要知道对方是谁
        recvfrom(sd, &rbuf,sizeof(rbuf),0, (void *)&raddr, &raddr_len );
        inet_ntop(AF_INET,&raddr.sin_addr,ip,1024);
        printf("massage from %s:%d\n",ip, ntohs(raddr.sin_port));

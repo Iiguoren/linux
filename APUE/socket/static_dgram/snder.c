@@ -9,6 +9,7 @@
 #include <math.h>
 #include <string.h>
 #include "proto.h"
+// 配置服务器地址端口->配置发送数据->sendto
 int main(int argc, char* argv[]){
     struct msg_st sbuf;
     int sd;
@@ -18,7 +19,7 @@ int main(int argc, char* argv[]){
         perror("socket()");
         exit(1);
     }
-    // bind 可以不要Bind
+    // bind 可以不要Bind,因为会自动分配一个IP和端口，服务端会抓取客户端的IP端口进行通讯
     strcpy(sbuf.name , "alle");
     sbuf.math = htonl(rand()%100);
     sbuf.chinese = htonl(rand()%100);

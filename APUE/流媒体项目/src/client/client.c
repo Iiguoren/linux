@@ -157,19 +157,19 @@ int main(int argc, char **argv){
             perror("malloc()");
             exit(1);
         }
-
-        len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&serveraddr, &serveraddr_len);
-        if(len < sizeof(struct msg_list_st))
-        {
-            fprintf(stderr, "message is too small.\n");
-            continue;
+        while(1){
+            len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&serveraddr, &serveraddr_len);
+            if(len < sizeof(struct msg_list_st))
+            {
+                fprintf(stderr, "message is too small.\n");
+                continue;
+            }
+            if(msg_list->chnid != LISTCHNID){
+                fprintf("chnid is not match.\n");
+                continue;
+            }
+            break;
         }
-        if(msg_list->chnid != LISTCHNID){
-            fprintf("chnid is not match.\n");
-            continue;
-        }
-        break;
-
         struct msg_listentry_st *pos;
         // 强转当作单字节
         for(pos = msg_list->entry; (char *)pos< (((char *)msg_list) + len);pos = (void *)(((char *)pos)+ntohs(pos->len))){

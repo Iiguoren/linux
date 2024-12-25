@@ -5,7 +5,7 @@ static void server_job(int sd){
     char buf[1024];
     int len;
     //proto.h中约定为longlong 
-    len =sprintf(bufm FMT_STAMP, (long long)time(NULL));
+    len =sprintf(buf, FMT_STAMP, (long long)time(NULL));
     if(send(sd, buf, len, 0)<0){
         perror("send()");
         exit(1);
