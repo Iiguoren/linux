@@ -145,10 +145,23 @@ int main(int argc, char **argv){
     /* SOCKET初始化 */
     socket_init();
     /* 获取频道信息*/
+    struct mlib_listentry_st *list;
+    int list_size;
+    mlib_getchnlist(&list, &list_size);
+    if(){
 
+
+
+    }
     /* 创建节目单线程 */
-
+    thr_list_create(list, list_size);
     /* 创建频道线程 */
+    int i;
+    for(i = 0; i<list_size; i++){
+        thr_channel_create(list + i);
+        /*if error*/
+    }
+    syslog(LOG_DEBUG, "$d channel threads created.", i);
     while(1)
         pause();
     // 执行不到
