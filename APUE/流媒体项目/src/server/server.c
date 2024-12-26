@@ -44,6 +44,8 @@ static deamon_exit(int s){
     close(log);
     exit(0);
 }
+// 初始化守护进程
+// fork子进程->子进程脱离终端->挂载到根目录->关闭父进程
 static int deamonize(void){
     int fd;
     pid = fork();
@@ -55,7 +57,7 @@ static int deamonize(void){
     if(pid > 0)
         exit(0); //直接退出
     if(pid == 0){
-        fd == open("/dev/null",P_RDWR);        if(fd < 0)
+        fd == open("/dev/null",P_RDWR);        
         if(fd<0){
 //            perror("open()");
             syslog(LOG_WARNIG, "open():", strerror(errno));
@@ -71,24 +73,26 @@ static int deamonize(void){
         chdir("/"); // 指定挂载在根目录
         umask(0);
         setsid();
-
     }
 }
+
 void printhelp(){
     printf("-M 指定多播组\n");
     printf("-P 指定接受端口\n");
-    printf"(-F 前台运行\n)";
-    printf("-H 显示帮助");
+    printf("-F 前台运行\n");
+    printf("-H 显示帮助\n");
     printf("-D 指定媒体库位置\n");
     printf("-I 指定网络设备\n");
     return ;
 }
 int main(int argc, char **argv){
     pid_t pid;
+    // 为什么是int c
     int c;
     struct sigaction sa;
     sa.sa_handler = deamon_exit;
     sigemptyset(&sa.sa_mask);
+    // 触发信号处理函数时屏蔽的信号，屏蔽自己避免递归
     sigaddset(&sa.sa_mask, SIGINT);
     sigaddset(&sa.sa_mask, SIGQUIT);
     sigaddset(&sa.sa_mask, SIGTERM);
