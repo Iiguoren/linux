@@ -3,6 +3,6 @@
 #include "medialib.h"
 
 int thr_list_create(struct mlib_listentry_st *, int );
-thr_list_destroy();
+int thr_list_destroy();
 
 #endif

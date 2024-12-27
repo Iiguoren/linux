@@ -3,7 +3,7 @@
 #ifndef MEDIALIB_H
 #define MEDIALIB_H
 
-struct mlib_listentry_st //自用结构体
+struct mlib_listentry_st //自用结构体,保存chID和描述
 {
     /* data */
     chnid_t chnid;

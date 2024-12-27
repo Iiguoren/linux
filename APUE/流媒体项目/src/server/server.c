@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <string.h>
 #include ".../include/proto.h"
+/* 创建多播组，多线程进行<发送节目单，发送音频流>*/
 /*
 -M 指定多播组
 -P 指定接受端口
