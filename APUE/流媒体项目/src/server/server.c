@@ -162,9 +162,13 @@ int main(int argc, char **argv){
     thr_list_create(list, list_size);
     /* 创建频道线程 */
     int i;
+    int err;
     for(i = 0; i<list_size; i++){
-        thr_channel_create(list + i);
+        err = thr_channel_create(list + i);
         /*if error*/
+        if(err){
+            fprintf(stderr, "thr_channel_create():%s\n",strerror(errno));
+        }
     }
     syslog(LOG_DEBUG, "$d channel threads created.", i);
     while(1)
