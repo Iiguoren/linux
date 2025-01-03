@@ -1,9 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "server_conf.h"
 #include <errno.h>
 #include <string.h>
-#include ".../include/proto.h"
+#include "../../include/proto.h"
+#include "../../include/site_type.h"
+#include "thr_list.h"
+#include "mytbf.h"
+#include "thr_channel.h"
+#include "medialib.h"
+#include <syslog.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <signal.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <bits/getopt_core.h>
 /* 创建多播组，多线程进行<发送节目单，发送音频流>*/
 /*
 -M 指定多播组
@@ -14,41 +32,57 @@
 -I 指定网络设备
 */
 struct server_conf_st server_conf = {
-    .rcvport = DEAFAULT_RCVPORT,
+    .rcvport = DEFAULT_RCVPORT,
     .mgroup = DEFAULT_MGROUP,
     .media_dir = DEFAULT_MEDIADIR,
     .runmode = RUN_DAEMON,
-    .ifname = DEFAULT_IF;
-}
-
-static void socket_init(void){
-    int serversd;
+    .ifname = DEFAULT_IF
+};
+int serversd;
+struct sockaddr_in sndaddr;
+static struct mlib_listentry_st *list;
+static int socket_init(void){
     struct ip_mreqn mreq;
     
     serversd = socket(AF_INET, SOCK_DGRAM, 0);
     if(serversd < 0){
-        syslog(LOGERR, "socket():");
+        syslog(LOG_ERR, "socket():");
         exit(1);
     }
     // bind();
     // 建立多播组
     inet_pton(AF_INET, server_conf.mgroup, &mreq.imr_multiaddr);
-    inet_pton(AF_INET, "0.0.0.0", &mreq.address);
+    inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
     mreq.imr_ifindex = if_nametoindex(server_conf.ifname);
-    if(setsocketopt(serversd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq))<0){
-        syslog(LPG_ERR, "setsockopt(IP_MULTICAST_IF):%s",strerror(errno));
+    if(setsockopt(serversd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq))<0){
+        syslog(LOG_ERR, "setsockopt(IP_MULTICAST_IF):%s",strerror(errno));
         exit(1);
     }
+    // bind
+    sndaddr.sin_family = AF_INET;
+    sndaddr.sin_port = htons(atoi(server_conf.rcvport));
+    inet_pton(AF_INET, server_conf.mgroup, &sndaddr.sin_addr);
+    // inet_pton(AF_INET, "0.0.0.0", &sndaddr.sin_addr.s_addr);
+
+    return 0;
 }
 
-static deamon_exit(int s){
-    close(log);
+static void deamon_exit(int s){
+    // 关闭节目单进程
+    thr_list_destroy();
+    // 关闭频道线程
+    thr_channel_destroyall();
+    // 释放频道结构体列表
+    mlib_freechnlist(list);
+    syslog(LOG_WARNING, "signal-%d caught, exit now.",s);
+    closelog();
     exit(0);
 }
 // 初始化守护进程
 // fork子进程->子进程脱离终端->挂载到根目录->关闭父进程
 static int deamonize(void){
     int fd;
+    pid_t pid;
     pid = fork();
     if(pid < 0 ){
 //        perror("fork()");
@@ -58,10 +92,10 @@ static int deamonize(void){
     if(pid > 0)
         exit(0); //直接退出
     if(pid == 0){
-        fd == open("/dev/null",P_RDWR);        
+        fd == open("/dev/null",O_RDWR);        
         if(fd<0){
 //            perror("open()");
-            syslog(LOG_WARNIG, "open():", strerror(errno));
+            syslog(LOG_WARNING, "open():%s", strerror(errno));
             return -2;
         }
         else{
@@ -74,6 +108,7 @@ static int deamonize(void){
         chdir("/"); // 指定挂载在根目录
         umask(0);
         setsid();
+        return 0;
     }
 }
 
@@ -88,7 +123,7 @@ void printhelp(){
 }
 int main(int argc, char **argv){
     pid_t pid;
-    // 为什么是int c
+    // 为什么是int c:getopt传回int型，通过ascll码对比
     int c;
     struct sigaction sa;
     sa.sa_handler = deamon_exit;
@@ -103,7 +138,7 @@ int main(int argc, char **argv){
     sigaction(SIGQUIT, &sa, NULL);
 
     /*?*/
-    openlog("netradio", LOG_PID|LOG_PERROR,LOG_DEAMON);
+    openlog("netradio", LOG_PID|LOG_PERROR,LOG_DAEMON);
     /* 命令行分析 */
     while(1){
         c =getopt(argc, argv, "M:P:FD:I:H");
@@ -118,7 +153,7 @@ int main(int argc, char **argv){
             server_conf.rcvport = optarg;
             break;
         case 'F':
-            server_conf.runport = RUN_FOREGROUND;
+            server_conf.runmode = RUN_FOREGROUND;
             break;
         case 'D':
             server_conf.media_dir = optarg;
@@ -150,30 +185,28 @@ int main(int argc, char **argv){
     /* SOCKET初始化 */
     socket_init();
     /* 获取频道信息*/
-    struct mlib_listentry_st *list;
     int list_size;
-    mlib_getchnlist(&list, &list_size);
-    if(){
-
-
-
+    int err = mlib_getchnlist(&list, &list_size);
+    if (err) {
+    syslog(LOG_ERR, "mlib_getchnlist():%s", strerror(errno));
+    exit(1);
     }
     /* 创建节目单线程 */
     thr_list_create(list, list_size);
     /* 创建频道线程 */
     int i;
-    int err;
     for(i = 0; i<list_size; i++){
         err = thr_channel_create(list + i);
         /*if error*/
         if(err){
-            fprintf(stderr, "thr_channel_create():%s\n",strerror(errno));
+            syslog(LOG_ERR, "mlib_getchnlist():%s", strerror(errno));
         }
     }
-    syslog(LOG_DEBUG, "$d channel threads created.", i);
+    syslog(LOG_DEBUG, "channel[%d] threads created.", i);
     while(1)
         pause();
     // 执行不到
     //close(log);
+    
     
 }

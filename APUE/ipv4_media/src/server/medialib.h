@@ -1,5 +1,6 @@
 #include "../../include/proto.h"
-
+#include "../../include/site_type.h"
+#include "mytbf.h"
 #ifndef MEDIALIB_H
 #define MEDIALIB_H
 

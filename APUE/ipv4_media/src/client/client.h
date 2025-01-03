@@ -7,7 +7,7 @@
 
 struct  client_conf_st
 {
-    char *rcvport;
+    char *rcvport; // 接收端口
     char *mgroup; //多播地址
     char *player_cmd; //命令行传输
 };

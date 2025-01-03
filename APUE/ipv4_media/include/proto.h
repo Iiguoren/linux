@@ -1,5 +1,6 @@
 #ifndef PROTO_H__
 #define PROTO_H__
+#include "site_type.h"
 // 默认组IP
 #define DEFAULT_MGROUP "224.2.2.2"
 // 默认端口
@@ -21,15 +22,18 @@
 struct msg_channel_st{
     chnid_t chnid;
     uint8_t data[1]; //可变数组
-}__attrbute__((packed)); // 高速编译器不要对齐
+}__attribute__((packed)); // 高速编译器不要对齐
 // 描述信息
 struct msg_listentry_st{
     chnid_t chnid;
+    uint16_t len;
     uint8_t desc[1];
-}__attrbute__((packed));
+}__attribute__((packed));
+
+// 节目单结构体
 struct msg_list_st
 {
     chnid_t chnid; // must be listchnnid
-    struct msg_listentry_st[1];
-}__attrbute__((packed));
+    struct msg_listentry_st entry[1];
+}__attribute__((packed));
 #endif

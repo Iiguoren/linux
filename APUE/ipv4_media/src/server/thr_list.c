@@ -1,21 +1,21 @@
+/* 此文件包含:为每个频道创建频道线程以及节目单线程；销毁线程*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/log.h>
+#include <syslog.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-
-#include "../..include/proto.h"
-
+#include "../../include/proto.h"
+#include "../../include/site_type.h"
 #include "thr_list.h"
 #include "server_conf.h"
 static pthread_t tid_list; // 线程列表
-static int num_list_entry; // 节目单中频道数量
+static int num_list_entry; // 给创建线程的handle使用，创建的线程数量
 static struct mlib_listentry_st *list_entry; // 频道列表
 /* 创建频道线程*/
 
@@ -31,27 +31,27 @@ static void *thr_list(void *p){
         // 节目单结构体大小： chnid_t + list_entry结构体大小(chnid + desc)
         totalsize += sizeof(struct msg_listentry_st) + strlen(list_entry[i].desc);
         }
-        entrylistptr = malloc(totalsize); // 创建节目单结构体
-        if (entrylistptr == NULL) {
+    entrylistptr = malloc(totalsize); // 创建节目单结构体
+    if (entrylistptr == NULL) {
         syslog(LOG_ERR, "malloc():%s", strerror(errno));
         exit(1);
+    }
+    entrylistptr->chnid = LISTCHNID; // 这是列表频道
+    syslog(LOG_DEBUG, "nr_list_entn:%d\n", num_list_entry);
+    while (1) {
+        syslog(LOG_INFO, "thr_list sndaddr :%d\n", sndaddr.sin_addr.s_addr);
+        ret = sendto(serversd, entrylistptr, totalsize, 0, (void *)&sndaddr, sizeof(sndaddr));
+        syslog(LOG_DEBUG, "sent content len:%d\n", entrylistptr->entry->len);
+        if (ret < 0) {
+        syslog(LOG_WARNING, "sendto(serversd, enlistp...:%s", strerror(errno));
+        } else {
+        syslog(LOG_DEBUG, "sendto(serversd, enlistp....):success");
         }
-        entrylistptr->chnid = LISTCHNID; // 这是列表频道
-        syslog(LOG_DEBUG, "nr_list_entn:%d\n", num_list_entry);
-        while (1) {
-            syslog(LOG_INFO, "thr_list sndaddr :%d\n", sndaddr.sin_addr.s_addr);
-            ret = sendto(serversd, entrylistptr, totalsize, 0, (void *)&sndaddr, sizeof(sndaddr));
-            syslog(LOG_DEBUG, "sent content len:%d\n", entrylistptr->entry->len);
-            if (ret < 0) {
-            syslog(LOG_WARNING, "sendto(serversd, enlistp...:%s", strerror(errno));
-            } else {
-            syslog(LOG_DEBUG, "sendto(serversd, enlistp....):success");
-            }
-            sleep(1);    
+        sleep(1);    
 
         }
     }
-
+/* 接收一个节目单入口结构体， */
 int thr_list_create(struct mlib_listentry_st *listptr, int num_ent){
     int err;
     list_entry = listptr;

@@ -6,29 +6,30 @@
 #include <errno.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <protp.h>
+#include "../../include/proto.h"
+#include "../../include/site_type.h"
 #include <getopt.h>
-#include <if/net.h>
+#include <net/if.h>
+#include "client.h"
 /*
 -M --mgroup指定多播组
 -P --port指定接受端口
 -p --player指定播放器
 -H --help显示帮助
 */
-struct client_conf_st client_conf;
-client_conf.rcvport = DEFAULT_RCVPORT;
-client_conf.mgroup = DEFAYKT_MGROUP; //多播地址
-.player_cmd = DEFAULT_PLAYERCMD; //命令行传输
+struct client_conf_st client_conf = {.rcvport = DEFAULT_RCVPORT,
+                                     .mgroup = DEFAULT_MGROUP,
+                                     .player_cmd = DEFAULT_PLAYERCMD};
 static void printhelp(void){
-    printf("-P --port 指定接收端口\n-M --mgroup 指定多播组\n
+    printf("-P --port 指定接收端口\n-M --mgroup 指定多播组\n\
     -p --player 指定播放器命令行\n -H --help 显示帮助\n");
 }
-
+// 向缓冲区写入n个字节,这个很重要
 static ssize_t writen(int fd, const char *buf, size_t count){
     int ret;
     int pos = 0;
     while(count>0){
-        ret = write(fd, buf+pos, len);
+        ret = write(fd, buf+pos, count);
         if(ret< 0)
         {
             if(errno == EINTR)
@@ -57,21 +58,22 @@ int main(int argc, char **argv){
     pid_t pid;
     struct sockaddr_in laddr, serveraddr,raddr;
     socklen_t serveraddr_len, raddr_len;
-    struct sockaddr_in laddr;
     struct ip_mreqn mreqn;
     int chosen_id;
-    struct option argarr[] = {{"port",1,NULL.'P'},{"mgroup",1,NULL,'M'},\
+    // 定义一个用于存储命令行选项的结构体数组
+    // 最后一个元素 {NULL, 0, NULL, 0} 是一个特殊的标记，通常用于表示选项数组的结束。
+    struct option argarr[] = {{"port",1,NULL, 'P'},{"mgroup",1,NULL,'M'},\
                                 {"player",1,NULL,'p'},{"help",0,NULL,'H'},{NULL,0,NULL,0}};
     while(1){
         int c = getopt_long(argc, argv, "P:M:p:H", argarr,&index);
         if(c < 0 )
             break;
-        swith(c){
+        switch(c){
             case'P':
                 client_conf.rcvport = optarg;
                 break;
             case'M':
-                client_conf.mgroup = oprarg;
+                client_conf.mgroup = optarg;
                 break;
             case'p':
                 client_conf.player_cmd = optarg;
@@ -87,33 +89,38 @@ int main(int argc, char **argv){
             }
     }
 
-    sd = socket(AF_INET, sock_DGRAM, 0/*UDP*/);
+    sd = socket(AF_INET, SOCK_DGRAM, 0);/*UDP*/
     if(sd<0){
         perror("socket()");
         exit(1);
     }
     // 将多播组地址放入结构体中
-    if(inet_pton(AF_INET, client_conf.mgoup, &mreqm.imr_multiaddr)<0)
+    if(inet_pton(AF_INET, client_conf.mgroup, &mreqn.imr_multiaddr)<0)
     {
         perror("inet_pton()");
         exit(1);
     }
     // 加入多播组的地址放入结构体
-    inet_pton(AF_INET, "0.0.0.0",&mreqn.imr_address);
-    mreqn.ifindex=if_nametoindex("eth0");
+    if(inet_pton(AF_INET, "0.0.0.0",&mreqn.imr_address)<0)
+    {
+        perror("inet_pton()");
+        exit(1);
+    }
+    mreqn.imr_ifindex=if_nametoindex("eth0");
     // 加入多播组成员
-    if(setsocopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqm))<0)
+    if(setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn))<0)
     {
         perror("setsockopt()");
         exit(1);
     }
-    if(setsocopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP,&val,sizeof(val))<0)
+    if(setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP,&val,sizeof(val))<0)
     {
         perror("setsockopt()");
         exit(1);
     }
+    // 配置本地addr
     laddr.sin_family =AF_INET;
-    // 进行格式转换
+    // 进行格式转换,host to network short
     laddr.sin_port = htons((atoi(client_conf.rcvport)));
     inet_pton(AF_INET, "0.0.0.0", &laddr.sin_addr);
     // bind需要一个addr_in的结构体，放入绑定的端口和IP
@@ -122,6 +129,7 @@ int main(int argc, char **argv){
         perror("bind()");
         exit(1);
     }
+    // pipe函数创建一个pipe
     if(pipe(pd)<0)
     {
         perror("pipe()");
@@ -142,22 +150,24 @@ int main(int argc, char **argv){
         if(pd[0]>0)
             close(pd[0]);
             // 使用player_cmd接受标准输入的流文件处理
-        execl("/bin/sh", "sh", "-c", client_conf.player_cmd,NULL);
+        if(execl("/bin/sh", "sh", "-c", client_conf.player_cmd,NULL)<0){
         // 如果execl失败
         perror("execl()");
         exit(1);
+        }
     }   
     else{
     // 如果是父进程，从网络收包，发送给子进程
     // 收节目单->选择频道->收频道包->发送给子进程
         struct msg_list_st *msg_list;
         msg_list = malloc(MSG_LIST_MAX);
-        if(msg_lsit == NULL)
+        if(msg_list == NULL)
         {
             perror("malloc()");
             exit(1);
         }
         while(1){
+            // 接收,存入msg_list
             len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&serveraddr, &serveraddr_len);
             if(len < sizeof(struct msg_list_st))
             {
@@ -165,32 +175,34 @@ int main(int argc, char **argv){
                 continue;
             }
             if(msg_list->chnid != LISTCHNID){
-                fprintf("chnid is not match.\n");
+                fprintf(stderr, "chnid is not match.\n");
                 continue;
             }
             break;
         }
         struct msg_listentry_st *pos;
-        // 强转当作单字节
+        // 强转当作单字节,会以字节单位处理内存地址,pos为msg_list的entry头地址((char *)msg_list) + len)为尾地址
         for(pos = msg_list->entry; (char *)pos< (((char *)msg_list) + len);pos = (void *)(((char *)pos)+ntohs(pos->len))){
-            printf("%d:%s\n", pos->chnid, pos->desc)
+            printf("%d:%s\n", pos->chnid, pos->desc);
         }
+        free(msg_list);
         while(1)
         {   
-            ret = scanf("%d", &chosenid);
+            ret = scanf("%d", &chosen_id);
             if(ret != 1)
                 exit(1);
         };
+        
         // 收频道包发送给子进程
         struct msg_channel_st *msg_channel;
-        mag_channel = malloc(MSG_CHANNAL_MAX);
+        msg_channel = malloc(MSG_CHANNEL_MAX);
         if(msg_channel == NULL){
             perror("malloc");
             exit(1);
         }
         while(1){
             len = recvfrom(sd, msg_channel, MSG_CHANNEL_MAX, 0, (void *)&raddr, &raddr_len);
-            if(raddr.sin_addr.s_addr != serverdaddr.sin_addr.s_addr||
+            if(raddr.sin_addr.s_addr != serveraddr.sin_addr.s_addr||
             raddr.sin_port != serveraddr.sin_port) // 判断地址
             {
                 fprintf(stderr, "Ignore:address not match\n");
@@ -201,7 +213,7 @@ int main(int argc, char **argv){
                 fprintf(stderr, "Ignore:message is too small.\n");
                 continue;
             }
-            if(msg_channel->chnid == chosenid)
+            if(msg_channel->chnid == chosen_id)
             {
                 if(writen(pd[1], msg_channel->data, len-sizeof(chnid_t))<0)
                     exit(1);
