@@ -9,7 +9,7 @@ ROS本身支持分布式运行，在ROS1中多个设备可以通过共享一个r
 #### 配置
 1. 要保证不同计算机处于同一网络中，最好分别设置固定IP，如果为虚拟机，需要将网络适配器改为桥接模式。
     查看IP:`ifconfig`
-    ![alt text](pic/ros远程通讯(1).png)
+    ![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110809198-1872130467.png)
     虚拟机IP为192.168.97.190，作为ROS从机
     同样方式查看工控机IP为192.168.97.102作为ROS主机
 
@@ -42,7 +42,7 @@ SSH配置，ubuntu系统中，安装ssh服务：
 username可通过在终端中查看：在ubuntu中终端为username@hostname；
 或者直接终端输入hostname查询；
 如果运行正常：输出类似:
-![alt text](pic/ros远程通讯(2).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110808795-1666101629.png)
 如果出错：
 permission denied,检查username是否正确，检查ssh config
 无法连接，检查ssh是否启动，检查ip地址和是否ping通；
@@ -51,7 +51,7 @@ permission denied,检查username是否正确，检查ssh config
 #### roslaunch 配置
 ssh配置成功后尝试配置roslaunch machine关键字，
 ROS从机中创建Launch文件
-![alt text](pic/ros远程通讯(3).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110808442-1751119821.png)
 配置mashine关键字:
 name: 自定义的机器人名称
 password: 用户密码
@@ -61,26 +61,26 @@ env-loader:要加载的环境脚本
 node配置和启动节点的配置大致相同，加入mashine关键字就好。
 
 环境脚本：
-![alt text](pic/ros远程通讯(4).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110808157-1033119594.png)
 注：以#!/bin/bash开头，exec"$@"结尾
 
 在ros从机中运行launch文件，正常运行如：
-![alt text](pic/ros远程通讯(5).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110807793-238646338.png)
 在主机中可以看懂节点正常启动：
-![alt text](pic/ros远程通讯(6).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110807461-211200516.png)
 如果正常运行，那么就可以到此为止了。
 但实际情况往往不是如此，经历各种报错，
-![alt text](pic/ros远程通讯(9).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110807096-1509557715.png)
 查询资料：ros所用的ssh客户端只能识别rsa算法生成的hostkey，所以之前使用ssh而保存的对于ros来说都是无效的。
 于是重新配置ssh
 
 #### 重新配置ssh-rsa免密登录
 1. 删除原来的known_hosts文件，rm ~/.ssh/known_hosts
 2. 配置rsa的时候顺带配置了免密登录，
-![alt text](pic/ros远程通讯(7).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110806696-1499110669.png)
 使用`ssh-keygen`获取rsa key pair，全部选择默认设置
 确保ssh仍然可用，使用`scp ~/.ssh/id_rsa.pub username@ipaddr:/home/username`
-![alt text](pic/ros远程通讯(8).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110806355-1027101646.png)
 3. 将公钥文件id_rsa.pub拷贝到远程计算机后，SSH登录到远程计算机：
 `ssh username@ip_address`
 4. 将id_rsa.pub的文件内容追加写入到远程计算机的~/.ssh/authorized_keys文件中，并修改authorized_keys文件的权限：
@@ -89,9 +89,14 @@ node配置和启动节点的配置大致相同，加入mashine关键字就好。
 之后完成rsa配置并且退出登录(exit)就无需密码。
 
 重新执行launch:
-![alt text](pic/ros远程通讯(10).png)
+![alt text](https://img2023.cnblogs.com/blog/3632107/202504/3632107-20250409110805938-1377285896.png)
 修改主机环境脚本权限：`chmod +x <sh文件>`
 再次执行成功。
+
+参考：
+http://wiki.ros.org/roslaunch/XML/machine
+https://blog.csdn.net/lixujie666/article/details/80260445/
+https://blog.csdn.net/weixin_43959160/article/details/113447073
 
 
 

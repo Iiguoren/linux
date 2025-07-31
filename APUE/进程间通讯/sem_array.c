@@ -31,7 +31,7 @@ static void V(){
     struct sembuf op;
 
     op.sem_num = 0;
-    op.sem_op = 1;//取一个资源
+    op.sem_op = 1;//还一个资源
     op.sem_flg = 0;//特殊要求
 
     while(semop(semid,&op,1) < 0){
@@ -51,6 +51,7 @@ void handler(){
     P();
     // 使用标准IO因为系统IO中write不能使用格式符
     fgets(buf,BUFSIZE,fp);
+    // 文件指针重新移动到头部
     fseek(fp,0,SEEK_SET);
     sleep(1);
     fprintf(fp,"%d\n",atoi(buf)+1);
