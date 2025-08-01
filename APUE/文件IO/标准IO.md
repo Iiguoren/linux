@@ -2,7 +2,7 @@
 io是一切实现的基础，IO分为标准IO:stdio,系统调用IO/文件IO:sysio(APUE第五章第三章)。
 ## stdio函数
 标准IO是对系统调用IO的封装，标准IO依赖于系统调用IO;都可以使用优先使用标准IO,例如：
-标准IO fopen函数在linux环境下以来open函数，windows环境下以来openfile函数。因此标准IO可移植性大于系统调用IO
+标准IO fopen函数在linux环境下以来open函数，windows环境下以来openfile函数。因此**标准IO可移植性大于系统调用IO**
 ### 格式化字符串
 格式化字符串是一种包含文本和格式说明符的字符串，用于指定输出的内容和排版方式。格式说明符通常以 % 开头；
 `printf("Name: %s, Age: %d, Height: %.2f, Initial: %c\n", name, age, height, initial);`

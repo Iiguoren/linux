@@ -137,8 +137,8 @@ int main(int argc, char **argv){
             printf("after:%s", buf);
             pos = ftell(fileread);
             
-            fseek(filewrite,pos,SEEK_SET);
-            if(fgets(buf, BUFSIZE, fileread)==NULL)
+            fseek(filewrite,pos,SEEK_SET); // fwrite定位10
+            if(fgets(buf, BUFSIZE, fileread)==NULL) //10
             	break;
             
             fgets(buf, BUFSIZE, fileread); //11
@@ -151,9 +151,11 @@ int main(int argc, char **argv){
         if(cur_line > TARGET_LINE){
                    
             if(fgets(buf, BUFSIZE, fileread)!=NULL){
-            	printf("d:%s", buf);}
-            	else{
-            	break;}
+            	printf("d:%s", buf);
+                }
+            else{
+            break;
+            }
             fputs(buf,filewrite);
             printf("cur:%d\n", cur_line);
         }
@@ -167,7 +169,7 @@ int main(int argc, char **argv){
         printf("no enough lines..");
     }
     long lastline_pos = ftell(filewrite);
-    truncate(argv[1], (off_t)lastline_pos);
+    truncate(argv[1], (off_t)lastline_pos); //截断最后一行
     fclose(fileread);
     fclose(filewrite);
     exit(0);
